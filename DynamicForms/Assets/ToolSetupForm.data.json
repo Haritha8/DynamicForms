@@ -1,0 +1,14 @@
+﻿{
+  "formId": "ToolSetupForm",
+  "data": {
+    "currentEntry": {
+      "toolSetupNumber": 1,
+      "toolingSetupPer": null,
+      "toolingSetUsed": ""
+    },
+    "logs": []
+  },
+  "meta": {
+    "toolSetupCounter": 1
+  }
+}

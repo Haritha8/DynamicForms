@@ -1,0 +1,288 @@
+﻿{
+  "id": "ToolSetupForm",
+  "label": "Tool Setup",
+  "elementType": "Form",
+  "schemaVersion": "1.0",
+  "children": [
+    {
+      "id": "EntryRowSection",
+      "label": "Tool Setup Entry",
+      "elementType": "Section",
+      "layout": {
+        "panelType": "Grid",
+        "rowDefinitions": [
+          { "height": "Auto" }
+        ],
+        "columnDefinitions": [
+          { "width": "120" },
+          { "width": "200" },
+          { "width": "220" },
+          { "width": "100" }
+        ]
+      },
+      "children": [
+        {
+          "id": "ToolSetupNumber",
+          "label": "Tool Setup #",
+          "elementType": "Field",
+          "bindingPath": "data.currentEntry.toolSetupNumber",
+          "dataType": "Int",
+          "controlType": "TextDisplay",
+          "isVisible": true,
+          "isEnabled": false,
+          "defaultValue": 1,
+          "autoIncrement": true,
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 0
+          }
+        },
+        {
+          "id": "ToolingSetupPer",
+          "label": "Tooling Setup Per",
+          "elementType": "Field",
+          "bindingPath": "data.currentEntry.toolingSetupPer",
+          "dataType": "String",
+          "controlType": "Dropdown",
+          "isVisible": true,
+          "isEnabled": true,
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 1
+          },
+          "options": [
+            "Machine 1",
+            "Machine 2",
+            "Machine 3",
+            "Machine 4",
+            "Machine 5"
+          ],
+          "validation": {
+            "isRequired": true,
+            "errorMessage": "Please select a tooling setup per value."
+          }
+        },
+        {
+          "id": "ToolingSetUsed",
+          "label": "Tooling Set Used",
+          "elementType": "Field",
+          "bindingPath": "data.currentEntry.toolingSetUsed",
+          "dataType": "String",
+          "controlType": "DialogInput",
+          "isVisible": true,
+          "isEnabled": true,
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 2
+          },
+          "validation": {
+            "isRequired": true,
+            "maxLength": 100,
+            "errorMessage": "Tooling set used is required."
+          }
+        },
+        {
+          "id": "SaveNewSetup",
+          "label": "Save",
+          "elementType": "Action",
+          "controlType": "Button",
+          "actionType": "SaveNewEntry",
+          "isVisible": true,
+          "isEnabled": false,
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 3
+          },
+          "dependencies": [
+            {
+              "type": "EnableWhen",
+              "sourcePath": "data.currentEntry.toolingSetupPer",
+              "operator": "NotEmpty"
+            },
+            {
+              "type": "EnableWhen",
+              "sourcePath": "data.currentEntry.toolingSetUsed",
+              "operator": "NotEmpty"
+            }
+          ],
+          "saveConfig": {
+            "sourceObjectPath": "data.currentEntry",
+            "targetCollectionPath": "data.logs",
+            "autoIncrementField": "toolSetupNumber",
+            "counterPath": "meta.toolSetupCounter",
+            "resetAfterSave": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "LogSection",
+      "label": "Tool Setup Log",
+      "elementType": "Repeater",
+      "bindingPath": "data.logs",
+      "layout": {
+        "panelType": "StackPanel"
+      },
+      "minItems": 0,
+      "maxItems": 1000,
+      "dependencies": [
+        {
+          "type": "VisibleWhen",
+          "sourcePath": "data.logs",
+          "operator": "HasAny"
+        }
+      ],
+      "itemTemplateLayout": {
+        "panelType": "Grid",
+        "rowDefinitions": [
+          { "height": "Auto" }
+        ],
+        "columnDefinitions": [
+          { "width": "120" },
+          { "width": "200" },
+          { "width": "220" },
+          { "width": "100" }
+        ]
+      },
+      "itemTemplate": [
+        {
+          "id": "Log_ToolSetupNumber",
+          "label": "Tool Setup #",
+          "elementType": "Field",
+          "bindingPath": "toolSetupNumber",
+          "dataType": "Int",
+          "controlType": "TextDisplay",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 0
+          }
+        },
+        {
+          "id": "Log_ToolingSetupPer_Display",
+          "label": "Tooling Setup Per",
+          "elementType": "Field",
+          "bindingPath": "toolingSetupPer",
+          "dataType": "String",
+          "controlType": "TextDisplay",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 1
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": false
+            }
+          ]
+        },
+        {
+          "id": "Log_ToolingSetupPer_Edit",
+          "label": "Tooling Setup Per",
+          "elementType": "Field",
+          "bindingPath": "toolingSetupPer",
+          "dataType": "String",
+          "controlType": "Dropdown",
+          "options": [
+            "Machine 1",
+            "Machine 2",
+            "Machine 3",
+            "Machine 4",
+            "Machine 5"
+          ],
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 1
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": true
+            }
+          ]
+        },
+        {
+          "id": "Log_ToolingSetUsed_Display",
+          "label": "Tooling Set Used",
+          "elementType": "Field",
+          "bindingPath": "toolingSetUsed",
+          "dataType": "String",
+          "controlType": "TextDisplay",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 2
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": false
+            }
+          ]
+        },
+        {
+          "id": "Log_ToolingSetUsed_Edit",
+          "label": "Tooling Set Used",
+          "elementType": "Field",
+          "bindingPath": "toolingSetUsed",
+          "dataType": "String",
+          "controlType": "DialogInput",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 2
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": true
+            }
+          ]
+        },
+        {
+          "id": "Log_EditButton",
+          "label": "Edit",
+          "elementType": "Action",
+          "controlType": "Button",
+          "actionType": "EnterEditMode",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 3
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": false
+            }
+          ]
+        },
+        {
+          "id": "Log_SaveButton",
+          "label": "Save",
+          "elementType": "Action",
+          "controlType": "Button",
+          "actionType": "SaveRowEdit",
+          "layout": {
+            "gridRow": 0,
+            "gridColumn": 3
+          },
+          "dependencies": [
+            {
+              "type": "VisibleWhen",
+              "sourcePath": "isEditing",
+              "operator": "Equals",
+              "value": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
