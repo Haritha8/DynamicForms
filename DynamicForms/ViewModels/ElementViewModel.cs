@@ -174,12 +174,7 @@ namespace DynamicForms.ViewModels
             Children = new ObservableCollection<ElementViewModel>();
             foreach (var def in parent.ItemTemplate)
             {
-                // For now we only support fields/actions in the item template
-                ElementViewModel vm = null;
-                if (def is FieldDefinition fd)
-                    vm = new FieldViewModel(fd, ctx);
-                else if (def is ActionDefinition ad)
-                    vm = new ActionViewModel(ad, ctx, null);
+                var vm = ElementViewModel.Create(def, ctx);
                 if (vm != null)
                     Children.Add(vm);
             }

@@ -132,153 +132,304 @@
           "operator": "HasAny"
         }
       ],
-      "itemTemplateLayout": {
-        "panelType": "Grid",
-        "rowDefinitions": [
-          { "height": "Auto" }
-        ],
-        "columnDefinitions": [
-          { "width": "120" },
-          { "width": "200" },
-          { "width": "220" },
-          { "width": "100" }
-        ]
-      },
       "itemTemplate": [
         {
-          "id": "Log_ToolSetupNumber",
-          "label": "Tool Setup #",
-          "elementType": "Field",
-          "bindingPath": "toolSetupNumber",
-          "dataType": "Int",
-          "controlType": "TextDisplay",
+          "id": "SummarySection",
+          "label": "Tool Setup Summary",
+          "elementType": "Section",
           "layout": {
-            "gridRow": 0,
-            "gridColumn": 0
-          }
-        },
-        {
-          "id": "Log_ToolingSetupPer_Display",
-          "label": "Tooling Setup Per",
-          "elementType": "Field",
-          "bindingPath": "toolingSetupPer",
-          "dataType": "String",
-          "controlType": "TextDisplay",
-          "layout": {
-            "gridRow": 0,
-            "gridColumn": 1
+            "panelType": "Grid",
+            "rowDefinitions": [
+              { "height": "Auto" }
+            ],
+            "columnDefinitions": [
+              { "width": "120" },
+              { "width": "200" },
+              { "width": "220" },
+              { "width": "100" }
+            ]
           },
-          "dependencies": [
+          "children": [
             {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": false
+              "id": "Log_ToolSetupNumber",
+              "label": "Tool Setup #",
+              "elementType": "Field",
+              "bindingPath": "toolSetupNumber",
+              "dataType": "Int",
+              "controlType": "TextDisplay",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 0
+              }
+            },
+            {
+              "id": "Log_ToolingSetupPer_Display",
+              "label": "Tooling Setup Per",
+              "elementType": "Field",
+              "bindingPath": "toolingSetupPer",
+              "dataType": "String",
+              "controlType": "TextDisplay",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 1
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": false
+                }
+              ]
+            },
+            {
+              "id": "Log_ToolingSetupPer_Edit",
+              "label": "Tooling Setup Per",
+              "elementType": "Field",
+              "bindingPath": "toolingSetupPer",
+              "dataType": "String",
+              "controlType": "Dropdown",
+              "options": [
+                "Machine 1",
+                "Machine 2",
+                "Machine 3",
+                "Machine 4",
+                "Machine 5"
+              ],
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 1
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "id": "Log_ToolingSetUsed_Display",
+              "label": "Tooling Set Used",
+              "elementType": "Field",
+              "bindingPath": "toolingSetUsed",
+              "dataType": "String",
+              "controlType": "TextDisplay",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 2
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": false
+                }
+              ]
+            },
+            {
+              "id": "Log_ToolingSetUsed_Edit",
+              "label": "Tooling Set Used",
+              "elementType": "Field",
+              "bindingPath": "toolingSetUsed",
+              "dataType": "String",
+              "controlType": "DialogInput",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 2
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "id": "Log_EditButton",
+              "label": "Edit",
+              "elementType": "Action",
+              "controlType": "Button",
+              "actionType": "EnterEditMode",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 3
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": false
+                }
+              ]
+            },
+            {
+              "id": "Log_SaveButton",
+              "label": "Save",
+              "elementType": "Action",
+              "controlType": "Button",
+              "actionType": "SaveRowEdit",
+              "layout": {
+                "gridRow": 0,
+                "gridColumn": 3
+              },
+              "dependencies": [
+                {
+                  "type": "VisibleWhen",
+                  "sourcePath": "isEditing",
+                  "operator": "Equals",
+                  "value": true
+                }
+              ]
             }
           ]
         },
         {
-          "id": "Log_ToolingSetupPer_Edit",
-          "label": "Tooling Setup Per",
-          "elementType": "Field",
-          "bindingPath": "toolingSetupPer",
-          "dataType": "String",
-          "controlType": "Dropdown",
-          "options": [
-            "Machine 1",
-            "Machine 2",
-            "Machine 3",
-            "Machine 4",
-            "Machine 5"
-          ],
+          "id": "SetupInformationSection",
+          "label": "Setup Information",
+          "elementType": "Section",
           "layout": {
-            "gridRow": 0,
-            "gridColumn": 1
+            "panelType": "StackPanel"
           },
-          "dependencies": [
+          "children": [
             {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": true
+              "id": "SetupInfo_HeaderRow",
+              "label": "Setup Information",
+              "elementType": "Section",
+              "layout": {
+                "panelType": "Grid",
+                "rowDefinitions": [
+                  { "height": "Auto" }
+                ],
+                "columnDefinitions": [
+                  { "width": "*" },
+                  { "width": "Auto" },
+                  { "width": "Auto" }
+                ]
+              },
+              "children": [
+                {
+                  "id": "SetupInfo_Title",
+                  "label": "Setup Information",
+                  "elementType": "Field",
+                  "dataType": "String",
+                  "controlType": "TextDisplay",
+                  "isVisible": true,
+                  "isEnabled": false,
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 0
+                  }
+                },
+                {
+                  "id": "SetupInfo_Sign",
+                  "label": "Sign",
+                  "elementType": "Action",
+                  "controlType": "Button",
+                  "actionType": "SetupInfoSign",
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 1
+                  }
+                },
+                {
+                  "id": "SetupInfo_Cancel",
+                  "label": "Cancel",
+                  "elementType": "Action",
+                  "controlType": "Button",
+                  "actionType": "SetupInfoCancel",
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "SetupInfo_BodyPlaceholder",
+              "label": "(Setup information details will go here)",
+              "elementType": "Field",
+              "dataType": "String",
+              "controlType": "TextDisplay",
+              "isVisible": true,
+              "isEnabled": false
             }
           ]
         },
         {
-          "id": "Log_ToolingSetUsed_Display",
-          "label": "Tooling Set Used",
-          "elementType": "Field",
-          "bindingPath": "toolingSetUsed",
-          "dataType": "String",
-          "controlType": "TextDisplay",
+          "id": "RecipeVerificationSection",
+          "label": "Recipe Verification",
+          "elementType": "Section",
           "layout": {
-            "gridRow": 0,
-            "gridColumn": 2
+            "panelType": "StackPanel"
           },
-          "dependencies": [
+          "children": [
             {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": false
-            }
-          ]
-        },
-        {
-          "id": "Log_ToolingSetUsed_Edit",
-          "label": "Tooling Set Used",
-          "elementType": "Field",
-          "bindingPath": "toolingSetUsed",
-          "dataType": "String",
-          "controlType": "DialogInput",
-          "layout": {
-            "gridRow": 0,
-            "gridColumn": 2
-          },
-          "dependencies": [
+              "id": "Recipe_HeaderRow",
+              "label": "Recipe Verification",
+              "elementType": "Section",
+              "layout": {
+                "panelType": "Grid",
+                "rowDefinitions": [
+                  { "height": "Auto" }
+                ],
+                "columnDefinitions": [
+                  { "width": "*" },
+                  { "width": "Auto" },
+                  { "width": "Auto" }
+                ]
+              },
+              "children": [
+                {
+                  "id": "Recipe_Title",
+                  "label": "Recipe Verification",
+                  "elementType": "Field",
+                  "dataType": "String",
+                  "controlType": "TextDisplay",
+                  "isVisible": true,
+                  "isEnabled": false,
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 0
+                  }
+                },
+                {
+                  "id": "Recipe_Verify",
+                  "label": "Verify",
+                  "elementType": "Action",
+                  "controlType": "Button",
+                  "actionType": "RecipeVerify",
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 1
+                  }
+                },
+                {
+                  "id": "Recipe_Cancel",
+                  "label": "Cancel",
+                  "elementType": "Action",
+                  "controlType": "Button",
+                  "actionType": "RecipeCancel",
+                  "layout": {
+                    "gridRow": 0,
+                    "gridColumn": 2
+                  }
+                }
+              ]
+            },
             {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": true
-            }
-          ]
-        },
-        {
-          "id": "Log_EditButton",
-          "label": "Edit",
-          "elementType": "Action",
-          "controlType": "Button",
-          "actionType": "EnterEditMode",
-          "layout": {
-            "gridRow": 0,
-            "gridColumn": 3
-          },
-          "dependencies": [
-            {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": false
-            }
-          ]
-        },
-        {
-          "id": "Log_SaveButton",
-          "label": "Save",
-          "elementType": "Action",
-          "controlType": "Button",
-          "actionType": "SaveRowEdit",
-          "layout": {
-            "gridRow": 0,
-            "gridColumn": 3
-          },
-          "dependencies": [
-            {
-              "type": "VisibleWhen",
-              "sourcePath": "isEditing",
-              "operator": "Equals",
-              "value": true
+              "id": "Recipe_BodyPlaceholder",
+              "label": "(Recipe verification details will go here)",
+              "elementType": "Field",
+              "dataType": "String",
+              "controlType": "TextDisplay",
+              "isVisible": true,
+              "isEnabled": false
             }
           ]
         }

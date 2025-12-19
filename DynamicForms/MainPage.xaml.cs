@@ -3,6 +3,7 @@ using DynamicForms.Models.Definitions;
 using DynamicForms.ViewModels;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -287,15 +288,27 @@ namespace DynamicForms
             };
             button.Click += async (s, e) =>
             {
-                if (vm.ActionType == "SaveNewEntry")
+                switch (vm.ActionType)
                 {
-                    await HandleSaveNewEntryAsync(vm);
-                }
-                else
-                {
-                    // fallback: if you later set other commands
-                    if (vm.Command != null && vm.Command.CanExecute(null))
-                        vm.Command.Execute(null);
+                    case "SaveNewEntry":
+                        // existing entry-row save
+                        await HandleSaveNewEntryAsync(vm);
+                        break;
+                    case "EnterEditMode":
+                        // Row-level Edit: set isEditing = true for this row's JSON object
+                        vm.DataContext.SetValue("isEditing", true);
+                        // Rebuild VM + rerender so VisibleWhen / edit controls take effect
+                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        RenderForm();
+                        break;
+                    case "SaveRowEdit":
+                        await HandleSaveRowEditAsync(vm);
+                        break;
+                    default:
+                        // fallback: use Command if you later want
+                        if (vm.Command != null && vm.Command.CanExecute(null))
+                            vm.Command.Execute(null);
+                        break;
                 }
             };
             container.Children.Add(button);
@@ -322,7 +335,54 @@ namespace DynamicForms
                         yield return c;
                 }
             }
-            // we will extend this when Repeater items get their own VMs
+            else if (root is RepeaterViewModel repeaterVm)
+            {
+                foreach (var item in repeaterVm.Items)
+                {
+                    foreach (var child in item.Children)
+                    {
+                        foreach (var c in GetAllFields(child))
+                            yield return c;
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<FieldViewModel> GetFieldsForSameContext(FormDataContext ctx)
+        {
+            return GetAllFields(ViewModel.Root)
+                .Where(f => ReferenceEquals(f.DataContext, ctx));
+        }
+
+        private async System.Threading.Tasks.Task HandleSaveRowEditAsync(ActionViewModel actionVm)
+        {
+            // 1. Get all fields that belong to this row (same FormDataContext)
+            var rowFields = GetFieldsForSameContext(actionVm.DataContext).ToList();
+            if (rowFields.Count == 0)
+                return;
+            // 2. Optional: validate required fields in this row
+            foreach (var f in rowFields)
+            {
+                if (!f.IsRequired)
+                    continue;
+                var val = f.Value?.ToString();
+                if (string.IsNullOrWhiteSpace(val))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Row validation failed: {f.Label} is required. Message: {f.ValidationErrorMessage}");
+                    return; // cancel save for this row
+                }
+            }
+            // 3. Flip isEditing = false for this row's JSON object
+            // Because actionVm.DataContext is a row context (basePath "data.logs[i]"),
+            // "isEditing" resolves to "data.logs[i].isEditing"
+            actionVm.DataContext.SetValue("isEditing", false);
+            // 4. Rebuild VM + rerender so:
+            // - display fields become visible again
+            // - edit controls & row Save button hide
+            ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+            RenderForm();
+            // Note: no need to "copy" values, the edit controls wrote directly into this row's JSON
         }
 
         private async Task HandleSaveNewEntryAsync(ActionViewModel actionVm)
