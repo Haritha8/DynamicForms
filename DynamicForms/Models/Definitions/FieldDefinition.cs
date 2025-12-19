@@ -13,6 +13,9 @@ namespace DynamicForms.Models.Definitions
         public string ControlType { get; set; }   // "TextDisplay", "Dropdown", "DialogInput"
         public bool IsVisible { get; set; } = true;
         public bool IsEnabled { get; set; } = true;
-        public List<string> Options { get; set; }
+        public List<string> Options { get; set; } = [];
+
+        public ValidationDefinition Validation { get; set; }
+
     }
 }

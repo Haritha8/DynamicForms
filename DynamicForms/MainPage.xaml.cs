@@ -46,8 +46,13 @@ namespace DynamicForms
         private void RenderEntryRow()
         {
             EntryRowPanel.Children.Clear();
-            foreach (var element in ViewModel.EntryElements)
+            var section = ViewModel.EntrySection;
+            if (section == null)
+                return;
+            foreach (var element in section.Children)
             {
+                if (!element.IsVisible)
+                    continue;
                 FrameworkElement control = null;
                 if (element is FieldViewModel fieldVm)
                 {
@@ -105,6 +110,10 @@ namespace DynamicForms
                         {
                             combo.Items.Add(option);
                         }
+                    }
+                    if (vm.Value != null)
+                    {
+                        combo.SelectedItem = vm.Value.ToString();
                     }
                     // Push changes back into VM when user picks a different item
                     combo.SelectionChanged += (s, e) =>

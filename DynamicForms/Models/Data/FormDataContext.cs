@@ -9,6 +9,10 @@ namespace DynamicForms.Models.Data
             Root = root;
         }
         // path like "data.currentEntry.toolingSetupPer"
+        public JToken GetToken(string path)
+        {
+            return Root.SelectToken(path);
+        }
         public object GetValue(string path)
         {
             var token = Root.SelectToken(path);

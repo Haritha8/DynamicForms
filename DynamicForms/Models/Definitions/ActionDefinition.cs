@@ -12,5 +12,6 @@ namespace DynamicForms.Models.Definitions
         public string ActionType { get; set; }    // "SaveNewEntry", "EnterEditMode", etc.
         public bool IsVisible { get; set; } = true;
         public bool IsEnabled { get; set; } = true;
+        public SaveConfigDefinition SaveConfig { get; set; }
     }
 }
