@@ -32,7 +32,7 @@ namespace DynamicForms.ViewModels
                {
                    visible = visible && result;
                }
-               else if(dep.Type == "EnabledWhen")
+               else if(dep.Type == "EnableWhen")
                {
                    enabled = enabled && result;
                 }
@@ -85,6 +85,108 @@ namespace DynamicForms.ViewModels
         }
 
         public List<DependencyDefinition> Dependencies { get; }
+
+        // Factory to build the right VM type for a given definition
+        public static ElementViewModel Create(FormElementDefinition def, FormDataContext ctx)
+        {
+            switch (def)
+            {
+                case FormDefinition f:
+                    return new FormViewModel(f, ctx);
+                case SectionDefinition s:
+                    return new SectionViewModel(s, ctx);
+                case RepeaterDefinition r:
+                    return new RepeaterViewModel(r, ctx);
+                case FieldDefinition fd:
+                    return new FieldViewModel(fd, ctx);
+                case ActionDefinition ad:
+                    return new ActionViewModel(ad, ctx, null);
+                default:
+                    return null;
+            }
+        }
+    }
+
+    // ---------- FORM & SECTION ----------
+    public class FormViewModel : ElementViewModel
+    {
+        public ObservableCollection<ElementViewModel> Children { get; } = new ObservableCollection<ElementViewModel>();
+        public FormViewModel(FormDefinition def, FormDataContext ctx)
+            : base(def, ctx)
+        {
+            foreach (var child in def.Children)
+            {
+                var vm = Create(child, ctx);
+                if (vm != null)
+                    Children.Add(vm);
+            }
+        }
+    }
+    public class SectionViewModel : ElementViewModel
+    {
+        public ObservableCollection<ElementViewModel> Children { get; } = new ObservableCollection<ElementViewModel>();
+        public SectionViewModel(SectionDefinition def, FormDataContext ctx)
+            : base(def, ctx)
+        {
+            foreach (var child in def.Children)
+            {
+                var vm = Create(child, ctx);
+                if (vm != null)
+                    Children.Add(vm);
+            }
+        }
+    }
+
+    // ---------- REPEATER & REPEATER ITEM ----------
+    public class RepeaterViewModel : ElementViewModel
+    {
+        private readonly RepeaterDefinition _def;
+        public RepeaterViewModel(RepeaterDefinition def, FormDataContext ctx)
+            : base(def, ctx)
+        {
+            _def = def;
+            Items = new ObservableCollection<RepeaterItemViewModel>();
+            BuildItems();
+        }
+        public string BindingPath => _def.BindingPath;
+        public IReadOnlyList<FormElementDefinition> ItemTemplate => _def.ItemTemplate;
+        public ObservableCollection<RepeaterItemViewModel> Items { get; }
+        private void BuildItems()
+        {
+            var arrayToken = DataContext.GetToken(BindingPath) as Newtonsoft.Json.Linq.JArray;
+            if (arrayToken == null)
+                return;
+            for (int i = 0; i < arrayToken.Count; i++)
+            {
+                // Each row has its own child context: e.g. "data.logs[0]"
+                var rowContext = DataContext.CreateChildContext($"{BindingPath}[{i}]");
+                var itemVm = new RepeaterItemViewModel(this, rowContext);
+                Items.Add(itemVm);
+            }
+        }
+    }
+    public class RepeaterItemViewModel : ViewModelBase
+    {
+        public RepeaterItemViewModel(RepeaterViewModel parent, FormDataContext ctx)
+        {
+            Parent = parent;
+            DataContext = ctx;
+            Children = new ObservableCollection<ElementViewModel>();
+            foreach (var def in parent.ItemTemplate)
+            {
+                // For now we only support fields/actions in the item template
+                ElementViewModel vm = null;
+                if (def is FieldDefinition fd)
+                    vm = new FieldViewModel(fd, ctx);
+                else if (def is ActionDefinition ad)
+                    vm = new ActionViewModel(ad, ctx, null);
+                if (vm != null)
+                    Children.Add(vm);
+            }
+        }
+        public RepeaterViewModel Parent { get; }
+        public FormDataContext DataContext { get; }
+        public ObservableCollection<ElementViewModel> Children { get; }
     }
     public class FieldViewModel : ElementViewModel
     {
@@ -103,6 +205,8 @@ namespace DynamicForms.ViewModels
         public string DataType => _def.DataType;
         public string BindingPath => _def.BindingPath;
         public List<string> Options => _def.Options;
+        public bool IsRequired => _def.Validation?.IsRequired == true;
+        public string ValidationErrorMessage => _def.Validation?.ErrorMessage;
         public object Value
         {
             get => _value;
@@ -129,6 +233,7 @@ namespace DynamicForms.ViewModels
         }
         public string ControlType => _def.ControlType;
         public string ActionType => _def.ActionType;
+        public SaveConfigDefinition SaveConfig => _def.SaveConfig;
         public RelayCommand Command { get; }
     }
 }

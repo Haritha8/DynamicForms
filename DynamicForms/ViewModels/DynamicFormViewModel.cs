@@ -11,8 +11,5 @@ namespace DynamicForms.ViewModels
         {
             Root = new FormViewModel(def, dataContext);
         }
-        // Convenience: first top-level section is our “entry row” for this prototype
-        public SectionViewModel EntrySection =>
-            Root.Children.OfType<SectionViewModel>().FirstOrDefault();
     }
 }
