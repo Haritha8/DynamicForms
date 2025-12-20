@@ -10,5 +10,6 @@ namespace DynamicForms.Models.Definitions
     public class SectionDefinition : FormElementDefinition
     {
         public List<FormElementDefinition> Children { get; set; } = [];
+        public PanelLayoutDefinition Layout { get; set; } = new PanelLayoutDefinition();
     }
 }

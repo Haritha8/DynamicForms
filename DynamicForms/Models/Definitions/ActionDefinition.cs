@@ -13,5 +13,7 @@ namespace DynamicForms.Models.Definitions
         public bool IsVisible { get; set; } = true;
         public bool IsEnabled { get; set; } = true;
         public SaveConfigDefinition SaveConfig { get; set; }
+
+        public ChildLayoutDefinition Layout { get; set; } = new ChildLayoutDefinition();
     }
 }

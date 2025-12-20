@@ -15,7 +15,7 @@
         ],
         "columnDefinitions": [
           { "width": "120" },
-          { "width": "200" },
+          { "width": "250" },
           { "width": "220" },
           { "width": "100" }
         ]
@@ -121,7 +121,12 @@
       "elementType": "Repeater",
       "bindingPath": "data.logs",
       "layout": {
-        "panelType": "StackPanel"
+        "panelType": "Grid",
+        "rowDefinitions": [
+          { "height": "Auto" },
+          { "height": "Auto" },
+          { "height": "Auto" }
+        ]
       },
       "minItems": 0,
       "maxItems": 1000,
@@ -138,13 +143,14 @@
           "label": "Tool Setup Summary",
           "elementType": "Section",
           "layout": {
+            "gridRow": 0,
             "panelType": "Grid",
             "rowDefinitions": [
               { "height": "Auto" }
             ],
             "columnDefinitions": [
               { "width": "120" },
-              { "width": "200" },
+              { "width": "250" },
               { "width": "220" },
               { "width": "100" }
             ]
@@ -291,20 +297,26 @@
         },
         {
           "id": "SetupInformationSection",
-          "label": "Setup Information",
+          "label": "",
           "elementType": "Section",
           "layout": {
-            "panelType": "StackPanel"
+            "gridRow": 1,
+            "panelType": "Grid",
+            "rowDefinitions": [
+              { "height": "50" },
+              { "height": "50" }
+            ]
           },
           "children": [
             {
               "id": "SetupInfo_HeaderRow",
-              "label": "Setup Information",
+              "label": "",
               "elementType": "Section",
               "layout": {
+                "gridRow": 0,
                 "panelType": "Grid",
                 "rowDefinitions": [
-                  { "height": "Auto" }
+                  { "height": "50" }
                 ],
                 "columnDefinitions": [
                   { "width": "*" },
@@ -356,6 +368,9 @@
               "elementType": "Field",
               "dataType": "String",
               "controlType": "TextDisplay",
+              "layout": {
+                "gridRow": 1
+              },
               "isVisible": true,
               "isEnabled": false
             }
@@ -363,20 +378,26 @@
         },
         {
           "id": "RecipeVerificationSection",
-          "label": "Recipe Verification",
+          "label": "",
           "elementType": "Section",
           "layout": {
-            "panelType": "StackPanel"
+            "gridRow": 2,
+            "panelType": "Grid",
+            "rowDefinitions": [
+              { "height": "50" },
+              { "height": "50" }
+            ]
           },
           "children": [
             {
               "id": "Recipe_HeaderRow",
-              "label": "Recipe Verification",
+              "label": "",
               "elementType": "Section",
               "layout": {
+                "gridRow": 0,
                 "panelType": "Grid",
                 "rowDefinitions": [
-                  { "height": "Auto" }
+                  { "height": "50" }
                 ],
                 "columnDefinitions": [
                   { "width": "*" },
@@ -428,6 +449,9 @@
               "elementType": "Field",
               "dataType": "String",
               "controlType": "TextDisplay",
+              "layout": {
+                "gridRow": 1
+              },
               "isVisible": true,
               "isEnabled": false
             }

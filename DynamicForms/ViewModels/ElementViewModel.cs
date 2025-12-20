@@ -16,7 +16,24 @@ namespace DynamicForms.ViewModels
             DataContext = dataContext;
             Dependencies = def.Dependencies;
 
-            EvaluateDependencies();
+            if (def is FieldDefinition fd)
+            {
+                ChildLayout = fd.Layout;
+            }
+            else if (def is ActionDefinition ad)
+            {
+                ChildLayout = ad.Layout;
+            }
+            else if (def is SectionDefinition sd)
+            {
+                ChildLayout = new ChildLayoutDefinition
+                {
+                    GridColumn = sd.Layout?.GridColumn,
+                    GridRow = sd.Layout?.GridRow
+                };
+            }
+
+                EvaluateDependencies();
         }
 
         private void EvaluateDependencies()
@@ -71,6 +88,8 @@ namespace DynamicForms.ViewModels
         public string Label { get; }
         public string ElementType { get; }
         public FormDataContext DataContext { get; }
+
+        public ChildLayoutDefinition ChildLayout { get; }
         private bool _isVisible = true;
         public bool IsVisible
         {
@@ -124,10 +143,14 @@ namespace DynamicForms.ViewModels
     }
     public class SectionViewModel : ElementViewModel
     {
+        private readonly SectionDefinition _def;
         public ObservableCollection<ElementViewModel> Children { get; } = new ObservableCollection<ElementViewModel>();
+
+        public PanelLayoutDefinition PanelLayout => _def.Layout ?? new PanelLayoutDefinition();
         public SectionViewModel(SectionDefinition def, FormDataContext ctx)
             : base(def, ctx)
         {
+            _def = def;
             foreach (var child in def.Children)
             {
                 var vm = Create(child, ctx);

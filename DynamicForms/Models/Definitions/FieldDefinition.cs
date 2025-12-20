@@ -17,5 +17,7 @@ namespace DynamicForms.Models.Definitions
 
         public ValidationDefinition Validation { get; set; }
 
+        public ChildLayoutDefinition Layout { get; set; } = new ChildLayoutDefinition();
+
     }
 }

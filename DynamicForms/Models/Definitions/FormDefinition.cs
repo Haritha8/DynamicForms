@@ -7,10 +7,14 @@ namespace DynamicForms.Models.Definitions
     {
         public string SchemaVersion { get; set; }
         public List<FormElementDefinition> Children { get; set; } = [];
+
+        public PanelLayoutDefinition Layout { get; set; } = new PanelLayoutDefinition();
     }
     public class RepeaterDefinition : FormElementDefinition
     {
         public string BindingPath { get; set; }   // "data.logs"
         public List<FormElementDefinition> ItemTemplate { get; set; } = [];
+
+        public PanelLayoutDefinition ItemTemplateLayout { get; set; } = new PanelLayoutDefinition();
     }
 }

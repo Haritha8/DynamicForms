@@ -71,78 +71,53 @@ namespace DynamicForms
             {
                 case FormViewModel formVm:
 
-                    // Form: just render its children
+                    // For now, just render all children vertically
+                    var rootPanel = new StackPanel
+                    {
+                        Orientation = Orientation.Vertical,
+                        Spacing = 8
+                    };
 
                     foreach (var child in formVm.Children)
-
                     {
-
-                        RenderElement(child, parent);
-
+                        RenderElement(child, rootPanel);
                     }
+                    
+                    parent.Children.Add(rootPanel);
 
-                    return; // nothing to add directly
-
+                    break; 
                 case SectionViewModel sectionVm:
 
-                    // Section container with label
-
-                    var sectionStack = new StackPanel
+                    // Outer wrapper: label + inner panel
+                    var wrapper = new StackPanel
                     {
-
-                        Margin = new Thickness(0, 4, 0, 4)
-
+                        Orientation = Orientation.Vertical,
+                        Margin = new Thickness(4)
                     };
-
                     if (!string.IsNullOrEmpty(sectionVm.Label))
-
                     {
-
-                        sectionStack.Children.Add(new TextBlock
-
+                        wrapper.Children.Add(new TextBlock
                         {
-
                             Text = sectionVm.Label,
-
-                            FontSize = 16,
-
-                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
-
+                            FontWeight = Windows.UI.Text.FontWeights.Bold,
                             Margin = new Thickness(0, 0, 0, 4)
-
                         });
-
                     }
-
-                    // Horizontal row for child fields/actions (for this prototype)
-
-                    var rowPanel = new StackPanel
-
-                    {
-
-                        Orientation = Orientation.Horizontal,
-
-                        Spacing = 8
-
-                    };
-
-                    sectionStack.Children.Add(rowPanel);
-
+                    // Inner panel based on JSON layout (Grid or StackPanel)
+                    var innerPanel = CreatePanelForLayout(sectionVm.PanelLayout);
+                    wrapper.Children.Add(innerPanel);
                     foreach (var child in sectionVm.Children)
-
                     {
-
-                        RenderElement(child, rowPanel);
-
+                        RenderElement(child, innerPanel);
                     }
-
-                    control = sectionStack;
-
+                    ApplyChildLayout(sectionVm, parent, wrapper);
+                    parent.Children.Add(wrapper);
                     break;
 
                 case RepeaterViewModel repeaterVm:
                     var repStack = new StackPanel
                     {
+                        Orientation = Orientation.Vertical,
                         Margin = new Thickness(0, 8, 0, 0)
                     };
                     if (!string.IsNullOrEmpty(repeaterVm.Label))
@@ -157,10 +132,10 @@ namespace DynamicForms
                     }
                     // One horizontal row per item
                     foreach (var item in repeaterVm.Items)
-                    {
+                    { 
                         var itemRow = new StackPanel
                         {
-                            Orientation = Orientation.Horizontal,
+                            Orientation = Orientation.Vertical,
                             Spacing = 8,
                             Background = new SolidColorBrush(Windows.UI.Colors.Honeydew),
                             Margin = new Thickness(0, 2, 0, 2)
@@ -171,19 +146,25 @@ namespace DynamicForms
                         }
                         repStack.Children.Add(itemRow);
                     }
-                    control = repStack;
+                    parent.Children.Add(repStack);
                     break;
 
                 case FieldViewModel fieldVm:
 
                     control = CreateFieldControl(fieldVm);
-
+                    if (control != null)
+                    {
+                        ApplyChildLayout(fieldVm, parent, control);
+                    }
                     break;
 
                 case ActionViewModel actionVm:
 
                     control = CreateActionControl(actionVm);
-
+                    if (control != null)
+                    {
+                        ApplyChildLayout(actionVm, parent, control);
+                    }
                     break;
 
             }
@@ -486,6 +467,82 @@ namespace DynamicForms
             ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
             RenderForm();
             // (Next step: render the log section and re-evaluate dependencies so it becomes visible)
+        }
+
+        private Panel CreatePanelForLayout(PanelLayoutDefinition layout)
+        {
+            // Default: horizontal stack
+            if (layout == null || string.IsNullOrEmpty(layout.PanelType) ||
+                layout.PanelType.Equals("StackPanel", StringComparison.OrdinalIgnoreCase))
+            {
+                return new StackPanel
+                {
+                    Orientation = Orientation.Horizontal
+                };
+            }
+            if (layout.PanelType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+            {
+                var grid = new Grid();
+                if (layout.RowDefinitions != null)
+                {
+                    foreach (var r in layout.RowDefinitions)
+                    {
+                        grid.RowDefinitions.Add(new RowDefinition
+                        {
+                            Height = ParseGridLength(r.Height)
+                        });
+                    }
+                }
+                if (layout.ColumnDefinitions != null)
+                {
+                    foreach (var c in layout.ColumnDefinitions)
+                    {
+                        grid.ColumnDefinitions.Add(new ColumnDefinition
+                        {
+                            Width = ParseGridLength(c.Width)
+                        });
+                    }
+                }
+                return grid;
+            }
+            // Fallback
+            return new StackPanel
+            {
+                Orientation = Orientation.Horizontal
+            };
+        }
+        private GridLength ParseGridLength(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return GridLength.Auto;
+            value = value.Trim();
+            if (value.Equals("Auto", StringComparison.OrdinalIgnoreCase))
+                return GridLength.Auto;
+            if (value.EndsWith("*"))
+            {
+                var starPart = value.Substring(0, value.Length - 1);
+                if (double.TryParse(starPart, out double weight))
+                    return new GridLength(weight, GridUnitType.Star);
+                // "*" or invalid number → treat as 1*
+                return new GridLength(1, GridUnitType.Star);
+            }
+            if (double.TryParse(value, out double pixel))
+                return new GridLength(pixel);
+            // fallback
+            return GridLength.Auto;
+        }
+
+        private void ApplyChildLayout(ElementViewModel vm, Panel parent, FrameworkElement element)
+        {
+            if (vm?.ChildLayout == null)
+                return;
+            if (parent is Grid)
+            {
+                if (vm.ChildLayout.GridRow.HasValue)
+                    Grid.SetRow(element, vm.ChildLayout.GridRow.Value);
+                if (vm.ChildLayout.GridColumn.HasValue)
+                    Grid.SetColumn(element, vm.ChildLayout.GridColumn.Value);
+            }
         }
     }
 }
