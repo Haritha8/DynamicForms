@@ -1,5 +1,6 @@
 ﻿using DynamicForms.Models.Data;
 using DynamicForms.Models.Definitions;
+using DynamicForms.Services;
 using DynamicForms.ViewModels;
 using Newtonsoft.Json.Linq;
 using System;
@@ -19,6 +20,7 @@ namespace DynamicForms
         public DynamicFormViewModel ViewModel { get; private set; }
         private FormDefinition _formDefinition;
         private FormDataContext _dataContext;
+        private FormActionService _formActions = new FormActionService();
         public MainPage()
         {
             this.InitializeComponent();
@@ -284,21 +286,25 @@ namespace DynamicForms
                 switch (vm.ActionType)
                 {
                     case "SaveNewEntry":
-                        // existing entry-row save
-                        await HandleSaveNewEntryAsync(vm);
+                        // Move JSON + validation logic into service
+                        await _formActions.SaveNewEntryAsync(ViewModel.Root, vm);
+                        // Rebuild VM & re-render (VIEW responsibility for now)
+                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        RenderForm();
                         break;
                     case "EnterEditMode":
-                        // Row-level Edit: set isEditing = true for this row's JSON object
-                        vm.DataContext.SetValue("isEditing", true);
-                        // Rebuild VM + rerender so VisibleWhen / edit controls take effect
+                        // Use service method instead of inline JSON change
+                        _formActions.EnterEditMode(vm);
                         ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
                         RenderForm();
                         break;
                     case "SaveRowEdit":
-                        await HandleSaveRowEditAsync(vm);
+                        await _formActions.SaveRowEditAsync(ViewModel.Root, vm);
+                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        RenderForm();
                         break;
                     default:
-                        // fallback: use Command if you later want
+                        // fallback: use Command if we later wire it properly
                         if (vm.Command != null && vm.Command.CanExecute(null))
                             vm.Command.Execute(null);
                         break;
@@ -306,179 +312,6 @@ namespace DynamicForms
             };
             container.Children.Add(button);
             return container;
-        }
-
-        private System.Collections.Generic.IEnumerable<FieldViewModel> GetAllFields(ElementViewModel root)
-        {
-            if (root is FieldViewModel fv)
-                yield return fv;
-            if (root is FormViewModel formVm)
-            {
-                foreach (var child in formVm.Children)
-                {
-                    foreach (var c in GetAllFields(child))
-                        yield return c;
-                }
-            }
-            else if (root is SectionViewModel sectionVm)
-            {
-                foreach (var child in sectionVm.Children)
-                {
-                    foreach (var c in GetAllFields(child))
-                        yield return c;
-                }
-            }
-            else if (root is RepeaterViewModel repeaterVm)
-            {
-                foreach (var item in repeaterVm.Items)
-                {
-                    foreach (var child in item.Children)
-                    {
-                        foreach (var c in GetAllFields(child))
-                            yield return c;
-                    }
-                }
-            }
-        }
-
-        private IEnumerable<FieldViewModel> GetFieldsForSameContext(FormDataContext ctx)
-        {
-            return GetAllFields(ViewModel.Root)
-                .Where(f => ReferenceEquals(f.DataContext, ctx));
-        }
-
-        private async System.Threading.Tasks.Task HandleSaveRowEditAsync(ActionViewModel actionVm)
-        {
-            // 1. Get all fields that belong to this row (same FormDataContext)
-            var rowFields = GetFieldsForSameContext(actionVm.DataContext).ToList();
-            if (rowFields.Count == 0)
-                return;
-            // 2. Optional: validate required fields in this row
-            foreach (var f in rowFields)
-            {
-                if (!f.IsRequired)
-                    continue;
-                var val = f.Value?.ToString();
-                if (string.IsNullOrWhiteSpace(val))
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Row validation failed: {f.Label} is required. Message: {f.ValidationErrorMessage}");
-                    return; // cancel save for this row
-                }
-            }
-            // 3. Flip isEditing = false for this row's JSON object
-            // Because actionVm.DataContext is a row context (basePath "data.logs[i]"),
-            // "isEditing" resolves to "data.logs[i].isEditing"
-            actionVm.DataContext.SetValue("isEditing", false);
-            // 4. Rebuild VM + rerender so:
-            // - display fields become visible again
-            // - edit controls & row Save button hide
-            ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
-            RenderForm();
-            // Note: no need to "copy" values, the edit controls wrote directly into this row's JSON
-        }
-
-        private async Task HandleSaveNewEntryAsync(ActionViewModel actionVm)
-        {
-            // Find all fields whose BindingPath is under "data.currentEntry"
-            var fields = GetAllFields(ViewModel.Root)
-               .Where(f => !string.IsNullOrEmpty(f.BindingPath) &&
-                           f.BindingPath.StartsWith("data.currentEntry."))
-               .ToList();
-            if (fields.Count == 0)
-                return;
-            // 2. VALIDATION: check required fields
-            foreach (var f in fields)
-            {
-                if (!f.IsRequired)
-                    continue;
-                var val = f.Value?.ToString();
-                if (string.IsNullOrWhiteSpace(val))
-                {
-                    // For now, just debug output. You can replace this with a ContentDialog later.
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Validation failed: {f.Label} is required. Message: {f.ValidationErrorMessage}");
-                    // Early return – cancel save
-                    return;
-                }
-            }
-            var saveCfg = actionVm.SaveConfig;
-            if (saveCfg == null)
-            {
-                System.Diagnostics.Debug.WriteLine("SaveNewEntry clicked but saveConfig is null.");
-                return;
-            }
-            // 3. Build a new log entry JObject from the current entry fields
-            var logEntry = new JObject();
-            foreach (var f in fields)
-            {
-                if (string.IsNullOrEmpty(f.BindingPath))
-                    continue;
-                // BindingPath like "data.currentEntry.toolingSetUsed" → take last segment
-                var segments = f.BindingPath.Split('.');
-                var propName = segments[segments.Length - 1];
-                var valueToken = f.Value != null
-                    ? JToken.FromObject(f.Value)
-                    : JValue.CreateNull();
-                logEntry[propName] = valueToken;
-            }
-            // default flag for edit mode in the log
-            logEntry["isEditing"] = false;
-            // 4. Append to data.logs
-            var logsToken = actionVm.DataContext.GetToken(saveCfg.TargetCollectionPath) as JArray;
-            if (logsToken == null)
-            {
-                System.Diagnostics.Debug.WriteLine($"Target collection '{saveCfg.TargetCollectionPath}' is not a JArray.");
-                return;
-            }
-            // Determine current ToolSetup# from the corresponding field
-            var numberField = fields.FirstOrDefault(f =>
-                f.BindingPath?.EndsWith("." + saveCfg.AutoIncrementField) == true);
-            int currentNumber = 1;
-            if (numberField?.Value != null)
-            {
-                // handle int/long/string
-                if (numberField.Value is int i) currentNumber = i;
-                else if (numberField.Value is long l) currentNumber = (int)l;
-                else int.TryParse(numberField.Value.ToString(), out currentNumber);
-            }
-            // Ensure the log entry uses the current number
-            logEntry[saveCfg.AutoIncrementField] = currentNumber;
-            logsToken.Add(logEntry);
-            // 5. Auto-increment counter and currentEntry.toolSetupNumber for the NEXT row
-            int nextNumber = currentNumber + 1;
-            // Update the meta counter in JSON
-            actionVm.DataContext.SetValue(saveCfg.CounterPath, nextNumber);
-            // Update the currentEntry field via the ViewModel (this also updates JSON)
-            if (numberField != null)
-            {
-                numberField.Value = nextNumber;
-            }
-            // 6. Reset other entry fields if resetAfterSave == true
-            if (saveCfg.ResetAfterSave)
-            {
-                foreach (var f in fields)
-                {
-                    if (f == numberField)
-                        continue; // don't reset the auto-increment field
-                    switch (f.DataType)
-                    {
-                        case "Int":
-                            f.Value = null;
-                            break;
-                        case "Bool":
-                            f.Value = false;
-                            break;
-                        default:
-                            f.Value = string.Empty;
-                            break;
-                    }
-                }
-            }
-            // 7. Re-render the entry row so the UI reflects updated VM values
-            ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
-            RenderForm();
-            // (Next step: render the log section and re-evaluate dependencies so it becomes visible)
         }
 
         private Panel CreatePanelForLayout(PanelLayoutDefinition layout)
@@ -553,63 +386,63 @@ namespace DynamicForms
         }
 
         private static void ApplyLayoutToElement(
-    FrameworkElement element,
-    ChildLayoutDefinition layout,
-    Panel parent)
-        {
-            if (layout == null || element == null)
-                return;
-
-            // --- Grid row/column/span ---
-            if (parent is Grid)
+        FrameworkElement element,
+        ChildLayoutDefinition layout,
+        Panel parent)
             {
-                if (layout.GridRow.HasValue)
-                    Grid.SetRow(element, layout.GridRow.Value);
+                if (layout == null || element == null)
+                    return;
 
-                if (layout.GridColumn.HasValue)
-                    Grid.SetColumn(element, layout.GridColumn.Value);
-
-                if (layout.GridRowSpan.HasValue)
-                    Grid.SetRowSpan(element, layout.GridRowSpan.Value);
-
-                if (layout.GridColumnSpan.HasValue)
-                    Grid.SetColumnSpan(element, layout.GridColumnSpan.Value);
-            }
-
-            // --- Alignment ---
-            if (!string.IsNullOrWhiteSpace(layout.HorizontalAlignment) &&
-                Enum.TryParse(layout.HorizontalAlignment, true, out HorizontalAlignment hAlign))
-            {
-                element.HorizontalAlignment = hAlign;
-            }
-
-            if (!string.IsNullOrWhiteSpace(layout.VerticalAlignment) &&
-                Enum.TryParse(layout.VerticalAlignment, true, out VerticalAlignment vAlign))
-            {
-                element.VerticalAlignment = vAlign;
-            }
-
-            // --- Margin ("left,top,right,bottom") ---
-            if (!string.IsNullOrWhiteSpace(layout.Margin))
-            {
-                var parts = layout.Margin.Split(',');
-                if (parts.Length == 4 &&
-                    double.TryParse(parts[0], out double left) &&
-                    double.TryParse(parts[1], out double top) &&
-                    double.TryParse(parts[2], out double right) &&
-                    double.TryParse(parts[3], out double bottom))
+                // --- Grid row/column/span ---
+                if (parent is Grid)
                 {
-                    element.Margin = new Thickness(left, top, right, bottom);
+                    if (layout.GridRow.HasValue)
+                        Grid.SetRow(element, layout.GridRow.Value);
+
+                    if (layout.GridColumn.HasValue)
+                        Grid.SetColumn(element, layout.GridColumn.Value);
+
+                    if (layout.GridRowSpan.HasValue)
+                        Grid.SetRowSpan(element, layout.GridRowSpan.Value);
+
+                    if (layout.GridColumnSpan.HasValue)
+                        Grid.SetColumnSpan(element, layout.GridColumnSpan.Value);
                 }
+
+                // --- Alignment ---
+                if (!string.IsNullOrWhiteSpace(layout.HorizontalAlignment) &&
+                    Enum.TryParse(layout.HorizontalAlignment, true, out HorizontalAlignment hAlign))
+                {
+                    element.HorizontalAlignment = hAlign;
+                }
+
+                if (!string.IsNullOrWhiteSpace(layout.VerticalAlignment) &&
+                    Enum.TryParse(layout.VerticalAlignment, true, out VerticalAlignment vAlign))
+                {
+                    element.VerticalAlignment = vAlign;
+                }
+
+                // --- Margin ("left,top,right,bottom") ---
+                if (!string.IsNullOrWhiteSpace(layout.Margin))
+                {
+                    var parts = layout.Margin.Split(',');
+                    if (parts.Length == 4 &&
+                        double.TryParse(parts[0], out double left) &&
+                        double.TryParse(parts[1], out double top) &&
+                        double.TryParse(parts[2], out double right) &&
+                        double.TryParse(parts[3], out double bottom))
+                    {
+                        element.Margin = new Thickness(left, top, right, bottom);
+                    }
+                }
+
+                // --- Explicit width/height ---
+                if (layout.Width.HasValue)
+                    element.Width = layout.Width.Value;
+
+                if (layout.Height.HasValue)
+                    element.Height = layout.Height.Value;
             }
-
-            // --- Explicit width/height ---
-            if (layout.Width.HasValue)
-                element.Width = layout.Width.Value;
-
-            if (layout.Height.HasValue)
-                element.Height = layout.Height.Value;
-        }
 
     }
 }
