@@ -346,7 +346,10 @@
                   "actionType": "SetupInfoSign",
                   "layout": {
                     "gridRow": 0,
-                    "gridColumn": 1
+                    "gridColumn": 1,
+                    "horizontalAlignment": "Right",
+                    "margin": "0,0,8,0",
+                    "width": 80
                   }
                 },
                 {
@@ -357,7 +360,9 @@
                   "actionType": "SetupInfoCancel",
                   "layout": {
                     "gridRow": 0,
-                    "gridColumn": 2
+                    "gridColumn": 2,
+                    "horizontalAlignment": "Right",
+                    "width": 80
                   }
                 }
               ]

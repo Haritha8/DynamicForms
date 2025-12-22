@@ -184,6 +184,17 @@ namespace DynamicForms
 
         private FrameworkElement CreateFieldControl(FieldViewModel vm)
         {
+            bool hasBinding = !string.IsNullOrEmpty(vm.BindingPath);
+            if (vm.ControlType == "TextDisplay" && !hasBinding)
+            {
+                return new TextBlock
+                {
+                    Text = vm.Label,
+                    FontSize = 16,
+                    Margin = new Thickness(8, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+            }
             // Container for label + editor
             var container = new StackPanel
             {
@@ -200,6 +211,7 @@ namespace DynamicForms
             FrameworkElement editor;
             switch (vm.ControlType)
             {
+
                 case "TextDisplay":
                     // Read-only display of the current value
                     var textBlock = new TextBlock
@@ -534,15 +546,70 @@ namespace DynamicForms
 
         private void ApplyChildLayout(ElementViewModel vm, Panel parent, FrameworkElement element)
         {
-            if (vm?.ChildLayout == null)
+            if (vm?.ChildLayout == null || element == null)
                 return;
+
+            ApplyLayoutToElement(element, vm.ChildLayout, parent);
+        }
+
+        private static void ApplyLayoutToElement(
+    FrameworkElement element,
+    ChildLayoutDefinition layout,
+    Panel parent)
+        {
+            if (layout == null || element == null)
+                return;
+
+            // --- Grid row/column/span ---
             if (parent is Grid)
             {
-                if (vm.ChildLayout.GridRow.HasValue)
-                    Grid.SetRow(element, vm.ChildLayout.GridRow.Value);
-                if (vm.ChildLayout.GridColumn.HasValue)
-                    Grid.SetColumn(element, vm.ChildLayout.GridColumn.Value);
+                if (layout.GridRow.HasValue)
+                    Grid.SetRow(element, layout.GridRow.Value);
+
+                if (layout.GridColumn.HasValue)
+                    Grid.SetColumn(element, layout.GridColumn.Value);
+
+                if (layout.GridRowSpan.HasValue)
+                    Grid.SetRowSpan(element, layout.GridRowSpan.Value);
+
+                if (layout.GridColumnSpan.HasValue)
+                    Grid.SetColumnSpan(element, layout.GridColumnSpan.Value);
             }
+
+            // --- Alignment ---
+            if (!string.IsNullOrWhiteSpace(layout.HorizontalAlignment) &&
+                Enum.TryParse(layout.HorizontalAlignment, true, out HorizontalAlignment hAlign))
+            {
+                element.HorizontalAlignment = hAlign;
+            }
+
+            if (!string.IsNullOrWhiteSpace(layout.VerticalAlignment) &&
+                Enum.TryParse(layout.VerticalAlignment, true, out VerticalAlignment vAlign))
+            {
+                element.VerticalAlignment = vAlign;
+            }
+
+            // --- Margin ("left,top,right,bottom") ---
+            if (!string.IsNullOrWhiteSpace(layout.Margin))
+            {
+                var parts = layout.Margin.Split(',');
+                if (parts.Length == 4 &&
+                    double.TryParse(parts[0], out double left) &&
+                    double.TryParse(parts[1], out double top) &&
+                    double.TryParse(parts[2], out double right) &&
+                    double.TryParse(parts[3], out double bottom))
+                {
+                    element.Margin = new Thickness(left, top, right, bottom);
+                }
+            }
+
+            // --- Explicit width/height ---
+            if (layout.Width.HasValue)
+                element.Width = layout.Width.Value;
+
+            if (layout.Height.HasValue)
+                element.Height = layout.Height.Value;
         }
+
     }
 }

@@ -14,6 +14,8 @@ namespace DynamicForms.Models.Definitions
         public List<RowLayoutDefinition> RowDefinitions { get; set; }
         public List<ColumnLayoutDefinition> ColumnDefinitions { get; set; }
 
+        public string Orientation { get; set; }  // "Horizontal" / "Vertical"
+
         public int? GridRow { get; set; }
         public int? GridColumn { get; set; }
     }
@@ -32,5 +34,18 @@ namespace DynamicForms.Models.Definitions
     {
         public int? GridRow { get; set; }
         public int? GridColumn { get; set; }
+
+        public int? GridRowSpan { get; set; }
+        public int? GridColumnSpan { get; set; }
+
+        // Alignment as strings (we'll parse)
+        public string HorizontalAlignment { get; set; }  // "Left", "Center"...
+        public string VerticalAlignment { get; set; }    // "Top", "Center"...
+
+        // "left,top,right,bottom"
+        public string Margin { get; set; }
+
+        public double? Width { get; set; }
+        public double? Height { get; set; }
     }
 }

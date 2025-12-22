@@ -15,6 +15,7 @@ namespace DynamicForms.ViewModels
             ElementType = def.ElementType;
             DataContext = dataContext;
             Dependencies = def.Dependencies;
+            StyleKey = def.StyleKey;
 
             if (def is FieldDefinition fd)
             {
@@ -88,7 +89,7 @@ namespace DynamicForms.ViewModels
         public string Label { get; }
         public string ElementType { get; }
         public FormDataContext DataContext { get; }
-
+        public string StyleKey { get; }
         public ChildLayoutDefinition ChildLayout { get; }
         private bool _isVisible = true;
         public bool IsVisible

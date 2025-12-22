@@ -12,5 +12,6 @@ namespace DynamicForms.Models.Definitions
         public string Label { get; set; }
         public string ElementType { get; set; }  // "Form", "Section", "Field", "Action", "Repeater"
         public List<DependencyDefinition> Dependencies { get; set; } = [];
+        public string StyleKey { get; set; }
     }
 }
