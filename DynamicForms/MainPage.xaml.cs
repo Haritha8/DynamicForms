@@ -1,65 +1,44 @@
-﻿using DynamicForms.Models.Data;
-using DynamicForms.Models.Definitions;
+﻿using DynamicForms.Models.Definitions;
 using DynamicForms.Services;
 using DynamicForms.ViewModels;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Media;
+
 namespace DynamicForms
 {
     public sealed partial class MainPage : Page
     {
-        public DynamicFormViewModel ViewModel { get; private set; }
-        private FormDefinition _formDefinition;
-        private FormDataContext _dataContext;
+        public MainPageViewModel ViewModel { get; private set; }
+
         private FormActionService _formActions = new FormActionService();
+
         public MainPage()
         {
             this.InitializeComponent();
             this.Loaded += MainPage_Loaded;
         }
+
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                // Load DATA json
-                var dataFile = await StorageFile.GetFileFromApplicationUriAsync(
-                    new Uri("ms-appx:///Assets/ToolSetupForm.data.json"));
-                var dataJson = await FileIO.ReadTextAsync(dataFile);
-                var dataRoot = JObject.Parse(dataJson);
-                _dataContext = new FormDataContext(dataRoot);
-                // Load STRUCTURE json
-                var structFile = await StorageFile.GetFileFromApplicationUriAsync(
-                    new Uri("ms-appx:///Assets/ToolSetupForm.structure.json"));
-                var structJson = await FileIO.ReadTextAsync(structFile);
-                _formDefinition = FormDefinitionFactory.FromJson(structJson);
-                // Create VM
-                ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
-                // Render entry row (4 elements) into EntryRowPanel
-                RenderForm();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading form: {ex}");
-            }
+            ViewModel = new MainPageViewModel();
+            DataContext = ViewModel;
+
+            await ViewModel.InitializeAsync();
+
+            // Existing behavior: render form from ViewModel.DynamicForm.Root
+            RenderForm();
         }
 
         private void RenderForm()
         {
             FormRootPanel.Children.Clear();
 
-            if (ViewModel?.Root == null)
+            if (ViewModel?.DynamicForm?.Root == null)
                 return;
 
-            RenderElement(ViewModel.Root, FormRootPanel);
+            RenderElement(ViewModel.DynamicForm.Root, FormRootPanel);
         }
 
         private void RenderElement(ElementViewModel vm, Panel parent)
@@ -84,10 +63,10 @@ namespace DynamicForms
                     {
                         RenderElement(child, rootPanel);
                     }
-                    
+
                     parent.Children.Add(rootPanel);
 
-                    break; 
+                    break;
                 case SectionViewModel sectionVm:
 
                     // Outer wrapper: label + inner panel
@@ -134,7 +113,7 @@ namespace DynamicForms
                     }
                     // One horizontal row per item
                     foreach (var item in repeaterVm.Items)
-                    { 
+                    {
                         var itemRow = new StackPanel
                         {
                             Orientation = Orientation.Vertical,
@@ -168,20 +147,14 @@ namespace DynamicForms
                         ApplyChildLayout(actionVm, parent, control);
                     }
                     break;
-
             }
 
             if (control != null)
             {
-
                 // Visibility respects vm.IsVisible (dependencies)
-
                 control.Visibility = vm.IsVisible ? Visibility.Visible : Visibility.Collapsed;
-
                 parent.Children.Add(control);
-
             }
-
         }
 
         private FrameworkElement CreateFieldControl(FieldViewModel vm)
@@ -213,7 +186,6 @@ namespace DynamicForms
             FrameworkElement editor;
             switch (vm.ControlType)
             {
-
                 case "TextDisplay":
                     // Read-only display of the current value
                     var textBlock = new TextBlock
@@ -286,25 +258,28 @@ namespace DynamicForms
                 switch (vm.ActionType)
                 {
                     case "SaveNewEntry":
-                        // Move JSON + validation logic into service
-                        await _formActions.SaveNewEntryAsync(ViewModel.Root, vm);
-                        // Rebuild VM & re-render (VIEW responsibility for now)
-                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        await _formActions.SaveNewEntryAsync(ViewModel.DynamicForm.Root, vm);
+                        // Persist data JSON
+                        await ViewModel.SaveDataAsync();
+
+                        ViewModel.RebuildDynamicForm();
                         RenderForm();
                         break;
                     case "EnterEditMode":
-                        // Use service method instead of inline JSON change
                         _formActions.EnterEditMode(vm);
-                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        // Persist data JSON
+                        await ViewModel.SaveDataAsync();
+                        ViewModel.RebuildDynamicForm();
                         RenderForm();
                         break;
                     case "SaveRowEdit":
-                        await _formActions.SaveRowEditAsync(ViewModel.Root, vm);
-                        ViewModel = new DynamicFormViewModel(_formDefinition, _dataContext);
+                        await _formActions.SaveRowEditAsync(ViewModel.DynamicForm.Root, vm);
+                        // Persist data JSON
+                        await ViewModel.SaveDataAsync();
+                        ViewModel.RebuildDynamicForm();
                         RenderForm();
                         break;
                     default:
-                        // fallback: use Command if we later wire it properly
                         if (vm.Command != null && vm.Command.CanExecute(null))
                             vm.Command.Execute(null);
                         break;
@@ -356,6 +331,7 @@ namespace DynamicForms
                 Orientation = Orientation.Horizontal
             };
         }
+
         private GridLength ParseGridLength(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -386,63 +362,62 @@ namespace DynamicForms
         }
 
         private static void ApplyLayoutToElement(
-        FrameworkElement element,
-        ChildLayoutDefinition layout,
-        Panel parent)
+            FrameworkElement element,
+            ChildLayoutDefinition layout,
+            Panel parent)
+        {
+            if (layout == null || element == null)
+                return;
+
+            // --- Grid row/column/span ---
+            if (parent is Grid)
             {
-                if (layout == null || element == null)
-                    return;
+                if (layout.GridRow.HasValue)
+                    Grid.SetRow(element, layout.GridRow.Value);
 
-                // --- Grid row/column/span ---
-                if (parent is Grid)
-                {
-                    if (layout.GridRow.HasValue)
-                        Grid.SetRow(element, layout.GridRow.Value);
+                if (layout.GridColumn.HasValue)
+                    Grid.SetColumn(element, layout.GridColumn.Value);
 
-                    if (layout.GridColumn.HasValue)
-                        Grid.SetColumn(element, layout.GridColumn.Value);
+                if (layout.GridRowSpan.HasValue)
+                    Grid.SetRowSpan(element, layout.GridRowSpan.Value);
 
-                    if (layout.GridRowSpan.HasValue)
-                        Grid.SetRowSpan(element, layout.GridRowSpan.Value);
-
-                    if (layout.GridColumnSpan.HasValue)
-                        Grid.SetColumnSpan(element, layout.GridColumnSpan.Value);
-                }
-
-                // --- Alignment ---
-                if (!string.IsNullOrWhiteSpace(layout.HorizontalAlignment) &&
-                    Enum.TryParse(layout.HorizontalAlignment, true, out HorizontalAlignment hAlign))
-                {
-                    element.HorizontalAlignment = hAlign;
-                }
-
-                if (!string.IsNullOrWhiteSpace(layout.VerticalAlignment) &&
-                    Enum.TryParse(layout.VerticalAlignment, true, out VerticalAlignment vAlign))
-                {
-                    element.VerticalAlignment = vAlign;
-                }
-
-                // --- Margin ("left,top,right,bottom") ---
-                if (!string.IsNullOrWhiteSpace(layout.Margin))
-                {
-                    var parts = layout.Margin.Split(',');
-                    if (parts.Length == 4 &&
-                        double.TryParse(parts[0], out double left) &&
-                        double.TryParse(parts[1], out double top) &&
-                        double.TryParse(parts[2], out double right) &&
-                        double.TryParse(parts[3], out double bottom))
-                    {
-                        element.Margin = new Thickness(left, top, right, bottom);
-                    }
-                }
-
-                // --- Explicit width/height ---
-                if (layout.Width.HasValue)
-                    element.Width = layout.Width.Value;
-
-                if (layout.Height.HasValue)
-                    element.Height = layout.Height.Value;
+                if (layout.GridColumnSpan.HasValue)
+                    Grid.SetColumnSpan(element, layout.GridColumnSpan.Value);
             }
 
+            // --- Alignment ---
+            if (!string.IsNullOrWhiteSpace(layout.HorizontalAlignment) &&
+                Enum.TryParse(layout.HorizontalAlignment, true, out HorizontalAlignment hAlign))
+            {
+                element.HorizontalAlignment = hAlign;
+            }
+
+            if (!string.IsNullOrWhiteSpace(layout.VerticalAlignment) &&
+                Enum.TryParse(layout.VerticalAlignment, true, out VerticalAlignment vAlign))
+            {
+                element.VerticalAlignment = vAlign;
+            }
+
+            // --- Margin ("left,top,right,bottom") ---
+            if (!string.IsNullOrWhiteSpace(layout.Margin))
+            {
+                var parts = layout.Margin.Split(',');
+                if (parts.Length == 4 &&
+                    double.TryParse(parts[0], out double left) &&
+                    double.TryParse(parts[1], out double top) &&
+                    double.TryParse(parts[2], out double right) &&
+                    double.TryParse(parts[3], out double bottom))
+                {
+                    element.Margin = new Thickness(left, top, right, bottom);
+                }
+            }
+
+            // --- Explicit width/height ---
+            if (layout.Width.HasValue)
+                element.Width = layout.Width.Value;
+
+            if (layout.Height.HasValue)
+                element.Height = layout.Height.Value;
+        }
     }
 }
