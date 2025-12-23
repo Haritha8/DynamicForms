@@ -2,20 +2,32 @@
   x:Class="DynamicForms.MainPage"
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
     <Grid Background="White">
-        <StackPanel HorizontalAlignment="Center"
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Text="Dynamic Forms Prototype"
+                   FontSize="24"
+                   HorizontalAlignment="Center"
                    VerticalAlignment="Center"
-                   Spacing="20">
-            <TextBlock Text="Dynamic Forms Prototype"
-                      FontSize="24"
-                      HorizontalAlignment="Center" />
-            <!-- Container for the ENTIRE form -->
-            <Border Background="LightYellow"
-                   Padding="10"
-                   CornerRadius="4">
+                   Margin="0,16,0,16" />
+
+        <!-- Scrollable form area -->
+        <Border Grid.Row="1"
+                Background="White"
+                Padding="10"
+                CornerRadius="4"
+                Margin="20">
+            <ScrollViewer
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="FormRootPanel"
-                           Spacing="8" />
-            </Border>
-        </StackPanel>
+                            Spacing="8" />
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Page>

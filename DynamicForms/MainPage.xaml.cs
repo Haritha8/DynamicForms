@@ -118,7 +118,7 @@ namespace DynamicForms
                         {
                             Orientation = Orientation.Vertical,
                             Spacing = 8,
-                            Background = new SolidColorBrush(Windows.UI.Colors.Honeydew),
+                            Background = new SolidColorBrush(Windows.UI.Colors.WhiteSmoke),
                             Margin = new Thickness(0, 2, 0, 2)
                         };
                         foreach (var child in item.Children)
@@ -251,37 +251,34 @@ namespace DynamicForms
             {
                 Content = vm.Label,
                 Width = 80,
-                Height = 32
+                Height = 32,
+                Background = new SolidColorBrush(Windows.UI.Colors.Teal)
             };
             button.Click += async (s, e) =>
             {
                 switch (vm.ActionType)
                 {
                     case "SaveNewEntry":
-                        await _formActions.SaveNewEntryAsync(ViewModel.DynamicForm.Root, vm);
-                        // Persist data JSON
-                        await ViewModel.SaveDataAsync();
+                        await ViewModel.HandleSaveNewEntryAsync(vm);
+                        // Rebuild VM from same data & re-render
+                        ViewModel.RebuildDynamicForm();
+                        RenderForm();
+                        break;
 
-                        ViewModel.RebuildDynamicForm();
-                        RenderForm();
-                        break;
                     case "EnterEditMode":
-                        _formActions.EnterEditMode(vm);
-                        // Persist data JSON
-                        await ViewModel.SaveDataAsync();
+                        await ViewModel.HandleEnterEditModeAsync(vm);
                         ViewModel.RebuildDynamicForm();
                         RenderForm();
                         break;
+
                     case "SaveRowEdit":
-                        await _formActions.SaveRowEditAsync(ViewModel.DynamicForm.Root, vm);
-                        // Persist data JSON
-                        await ViewModel.SaveDataAsync();
+                        await ViewModel.HandleSaveRowEditAsync(vm);
                         ViewModel.RebuildDynamicForm();
                         RenderForm();
                         break;
+
                     default:
-                        if (vm.Command != null && vm.Command.CanExecute(null))
-                            vm.Command.Execute(null);
+                        // optional: vm.Command, if you decide to keep it
                         break;
                 }
             };

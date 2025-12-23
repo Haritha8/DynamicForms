@@ -1,5 +1,6 @@
 ﻿using DynamicForms.Models.Data;
 using DynamicForms.Models.Definitions;
+using DynamicForms.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -10,6 +11,8 @@ namespace DynamicForms.ViewModels
 {
     public class MainPageViewModel : ViewModelBase
     {
+        private readonly FormActionService _formActions = new FormActionService();
+
         private const string DataFileName = "ToolSetupForm.data.json";
         private const string DataAssetUri = "ms-appx:///Assets/ToolSetupForm.data.json";
         private const string StructureAssetUri = "ms-appx:///Assets/ToolSetupForm.structure.json";
@@ -124,6 +127,33 @@ namespace DynamicForms.ViewModels
                 NameCollisionOption.ReplaceExisting);
 
             return localCopy;
+        }
+
+        public async Task HandleSaveNewEntryAsync(ActionViewModel actionVm)
+        {
+            if (DynamicForm?.Root == null || actionVm == null)
+                return;
+
+            await _formActions.SaveNewEntryAsync(DynamicForm.Root, actionVm);
+            await SaveDataAsync();
+        }
+
+        public async Task HandleSaveRowEditAsync(ActionViewModel actionVm)
+        {
+            if (DynamicForm?.Root == null || actionVm == null)
+                return;
+
+            await _formActions.SaveRowEditAsync(DynamicForm.Root, actionVm);
+            await SaveDataAsync();
+        }
+
+        public async Task HandleEnterEditModeAsync(ActionViewModel actionVm)
+        {
+            if (actionVm == null)
+                return;
+
+            _formActions.EnterEditMode(actionVm);
+            await SaveDataAsync();
         }
     }
 }
